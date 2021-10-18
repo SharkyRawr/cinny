@@ -1,7 +1,7 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 import React, { useState, useEffect, useRef } from 'react';
-import PropTypes from 'prop-types';
+import PropTypes, { string } from 'prop-types';
 import './EmojiBoard.scss';
 
 import parse from 'html-react-parser';
@@ -24,6 +24,33 @@ import PhotoIC from '../../../../public/res/ic/outlined/photo.svg';
 import BulbIC from '../../../../public/res/ic/outlined/bulb.svg';
 import PeaceIC from '../../../../public/res/ic/outlined/peace.svg';
 import FlagIC from '../../../../public/res/ic/outlined/flag.svg';
+import initMatrix from '../../../client/initMatrix';
+
+function PonyStickers() {
+  const [emotes, setEmotes] = useState({});
+
+  useEffect(() => {
+    const mx = initMatrix.matrixClient;
+    mx.getAccountDataFromServer('im.ponies.user_emotes').then((e) => {
+      setEmotes(e.images);
+      console.log('PONIES:', e.images);
+    });
+  });
+
+  let emoteElements = [];
+  for (const [key, value] of Object.entries(emotes)) {
+    emoteElements.push(
+      <img class="emoji" key={key} src={initMatrix.matrixClient.mxcUrlToHttp(value.url)} />
+    )
+  }
+
+  return (
+    <div className="emoji-group">
+      <Text className="emoji-group__header" variant="b2">Pony Stickers</Text>
+      <div className="emoji-set">{emoteElements}</div>
+    </div>
+  );
+}
 
 function EmojiGroup({ name, groupEmojis }) {
   function getEmojiBoard() {
@@ -179,6 +206,10 @@ function EmojiBoard({ onSelect }) {
           <ScrollView ref={scrollEmojisRef} autoHide>
             <div onMouseMove={hoverEmoji} onClick={selectEmoji}>
               <SearchedEmoji />
+              {
+                PonyStickers()
+              }
+              ,
               {
                 emojiGroups.map((group) => (
                   <EmojiGroup key={group.name} name={group.name} groupEmojis={group.emojis} />
