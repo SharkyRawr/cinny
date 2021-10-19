@@ -54,7 +54,7 @@ function PonyStickers() {
   if (numEmotes > 0) {
     return (
       <div className="emoji-group">
-        <Text className="emoji-group__header" variant="b2">Pony Stickers</Text>
+        <Text className="emoji-group__header" variant="b2">User Emotes</Text>
         <div className="emoji-set">{emoteElements}</div>
       </div>
     );
@@ -227,7 +227,6 @@ function EmojiBoard({ onSelect }) {
               {
                 PonyStickers()
               }
-              ,
               {
                 emojiGroups.map((group) => (
                   <EmojiGroup key={group.name} name={group.name} groupEmojis={group.emojis} />
