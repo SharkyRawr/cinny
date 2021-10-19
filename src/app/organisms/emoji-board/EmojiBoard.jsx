@@ -1,7 +1,7 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 import React, { useState, useEffect, useRef } from 'react';
-import PropTypes, { string } from 'prop-types';
+import PropTypes from 'prop-types';
 import './EmojiBoard.scss';
 
 import parse from 'html-react-parser';
@@ -32,24 +32,34 @@ function PonyStickers() {
   useEffect(() => {
     const mx = initMatrix.matrixClient;
     mx.getAccountDataFromServer('im.ponies.user_emotes').then((e) => {
-      setEmotes(e.images);
-      console.log('PONIES:', e.images);
+      setEmotes(e.emoticons);
+      console.log('PONIES got user_emotes:', e.emoticons);
+    }).catch((err) => {
+      console.error('PONIES:', err);
     });
   });
 
-  let emoteElements = [];
-  for (const [key, value] of Object.entries(emotes)) {
-    emoteElements.push(
-      <img class="emoji" key={key} src={initMatrix.matrixClient.mxcUrlToHttp(value.url)} />
-    )
+  if (typeof emotes === 'undefined') {
+    console.error('Could not get emotes!');
+    return ('');
+  }
+  const numEmotes = Object.keys(emotes).length;
+  if (numEmotes <= 0) {
+    console.warn('No emotes found. Not showing the sticker picker EmojiGroup.');
+    return ('');
   }
 
-  return (
-    <div className="emoji-group">
-      <Text className="emoji-group__header" variant="b2">Pony Stickers</Text>
-      <div className="emoji-set">{emoteElements}</div>
-    </div>
-  );
+  const emoteElements = Object.keys(emotes).map((value) => (<img className="emoji" alt={value} key={value} shortcodes={value} unicode={value} src={initMatrix.matrixClient.mxcUrlToHttp(emotes[value].url)} />));
+
+  if (numEmotes > 0) {
+    return (
+      <div className="emoji-group">
+        <Text className="emoji-group__header" variant="b2">Pony Stickers</Text>
+        <div className="emoji-set">{emoteElements}</div>
+      </div>
+    );
+  }
+  return ('');
 }
 
 function EmojiGroup({ name, groupEmojis }) {
@@ -143,10 +153,13 @@ function EmojiBoard({ onSelect }) {
   function getEmojiDataFromTarget(target) {
     const unicode = target.getAttribute('unicode');
     const hexcode = target.getAttribute('hexcode');
+    const src = target.getAttribute('src');
     let shortcodes = target.getAttribute('shortcodes');
     if (typeof shortcodes === 'undefined') shortcodes = undefined;
     else shortcodes = shortcodes.split(',');
-    return { unicode, hexcode, shortcodes };
+    return {
+      unicode, hexcode, src, shortcodes,
+    };
   }
 
   function selectEmoji(e) {
@@ -161,15 +174,20 @@ function EmojiBoard({ onSelect }) {
     const infoShortcode = emojiInfo.current.lastElementChild;
 
     const emojiSrc = infoEmoji.src;
-    infoEmoji.src = `${emojiSrc.slice(0, emojiSrc.lastIndexOf('/') + 1)}${emoji.hexcode.toLowerCase()}.png`;
-    infoShortcode.textContent = `:${emoji.shortcode}:`;
+    if (typeof emoji === 'object') {
+      infoEmoji.src = emoji.src;
+      infoShortcode.textContent = `${emoji.shortcode}`;
+    } else {
+      infoEmoji.src = `${emojiSrc.slice(0, emojiSrc.lastIndexOf('/') + 1)}${emoji.hexcode.toLowerCase()}.png`;
+      infoShortcode.textContent = `:${emoji.shortcode}:`;
+    }
   }
 
   function hoverEmoji(e) {
     if (isTargetNotEmoji(e.target)) return;
 
     const emoji = e.target;
-    const { shortcodes, hexcode } = getEmojiDataFromTarget(emoji);
+    const { shortcodes, hexcode, src } = getEmojiDataFromTarget(emoji);
 
     if (typeof shortcodes === 'undefined') {
       searchRef.current.placeholder = 'Search';
@@ -178,7 +196,7 @@ function EmojiBoard({ onSelect }) {
     }
     if (searchRef.current.placeholder === shortcodes[0]) return;
     searchRef.current.setAttribute('placeholder', shortcodes[0]);
-    setEmojiInfo({ hexcode, shortcode: shortcodes[0] });
+    setEmojiInfo({ hexcode, shortcode: shortcodes[0], src });
   }
 
   function handleSearchChange(e) {
@@ -204,8 +222,8 @@ function EmojiBoard({ onSelect }) {
         </div>
         <div className="emoji-board__content__emojis">
           <ScrollView ref={scrollEmojisRef} autoHide>
+            <SearchedEmoji />
             <div onMouseMove={hoverEmoji} onClick={selectEmoji}>
-              <SearchedEmoji />
               {
                 PonyStickers()
               }
